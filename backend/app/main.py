@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+import os
+import uuid
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from .models import AnalysisRequest, AnalysisResponse, ErrorBody, HealthResponse
+from .service import build_analysis
+
+
+class InvalidInputError(Exception):
+    def __init__(self, message: str, details: dict[str, object] | None = None) -> None:
+        self.message = message
+        self.details = details or {}
+        super().__init__(message)
+
+
+def error_response(*, status_code: int, code: str, message: str, retryable: bool, details: dict[str, object]) -> JSONResponse:
+    body = ErrorBody.model_validate(
+        {
+            "error": {
+                "code": code,
+                "message": message,
+                "retryable": retryable,
+                "details": details,
+            }
+        }
+    )
+    return JSONResponse(status_code=status_code, content=body.model_dump(mode="json"))
+
+
+app = FastAPI(
+    title="Creator Growth Copilot API",
+    version="0.2.0",
+    description="Deterministic M0 API. No social login, scraping, database, or live AI provider.",
+)
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CGC_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
+)
+
+
+@app.middleware("http")
+async def request_id_header(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.exception_handler(InvalidInputError)
+async def invalid_input_handler(_request: Request, exc: InvalidInputError) -> JSONResponse:
+    return error_response(
+        status_code=400,
+        code="invalid_input",
+        message=exc.message,
+        retryable=False,
+        details=exc.details,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    fields = [".".join(str(part) for part in item["loc"] if part != "body") for item in exc.errors()]
+    return error_response(
+        status_code=422,
+        code="validation_failed",
+        message="The request does not match the analysis contract.",
+        retryable=False,
+        details={"fields": fields},
+    )
+
+
+@app.exception_handler(Exception)
+async def internal_error_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    return error_response(
+        status_code=500,
+        code="internal_error",
+        message="The analysis could not be completed.",
+        retryable=True,
+        details={},
+    )
+
+
+@app.get("/health", response_model=HealthResponse)
+async def health() -> HealthResponse:
+    return HealthResponse(status="ok", api="ready", database="not_required_for_m0", provider="mock")
+
+
+@app.post(
+    "/api/v1/analyses",
+    response_model=AnalysisResponse,
+    responses={400: {"model": ErrorBody}, 422: {"model": ErrorBody}, 500: {"model": ErrorBody}},
+)
+async def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
+    if not request.content_url and not (request.manual_content and request.manual_content.strip()):
+        raise InvalidInputError("Provide a public content URL or manual content.")
+    return build_analysis(request)
