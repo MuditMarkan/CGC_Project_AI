@@ -1,71 +1,78 @@
-# CGC Project AI
+# Creator Growth Copilot V5 — Full Stack
 
-## FastAPI setup
+This package contains a working Creator Growth Copilot foundation:
 
-Use Python 3.11 or newer. Run these commands from the project root, the folder that contains `README.md`.
+- `frontend/`: Next.js and TypeScript
+- `backend/`: Python, FastAPI, and Pydantic
+- API integration: `POST /api/v1/analyses`
+- Health check: `GET /health`
+- Interactive API documentation: `http://127.0.0.1:8000/docs`
 
-### 1. Create a virtual environment
+Selenium and Playwright are intentionally excluded.
 
-PowerShell (Windows):
+## Requirements
 
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+- Node.js 20 or newer
+- npm 10 or newer
+- Python 3.11 or newer
 
-macOS/Linux:
+## 1. Start the Python backend
 
 ```bash
+cd backend
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-If PowerShell blocks activation, run this once in PowerShell and then activate again:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### 2. Install the project dependencies
-
-With the virtual environment activated, run:
-
-```bash
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-The dependency versions are pinned in `requirements.txt` so the team uses the same FastAPI and Uvicorn versions.
-
-### 3. Start the API
+Check the API:
 
 ```bash
-python -m uvicorn app.main:app --reload
+curl http://127.0.0.1:8000/health
 ```
 
-The API will be available at <http://127.0.0.1:8000>.
+## 2. Start the Next.js frontend
 
-### 4. Verify the installation
-
-Open these URLs in a browser:
-
-- <http://127.0.0.1:8000/> - basic API response
-- <http://127.0.0.1:8000/health> - health check
-- <http://127.0.0.1:8000/docs> - interactive Swagger API docs
-
-You can also verify the dependency versions with:
+Open a second terminal:
 
 ```bash
-python -m pip show fastapi uvicorn
+cd frontend
+npm install
+cp .env.example .env.local
+npm run dev
 ```
 
-### Daily workflow
+Open `http://127.0.0.1:3000`.
 
-From the project root:
+The included frontend environment uses:
 
-```powershell
-.venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --reload
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_USE_MOCK=false
 ```
 
-Use `source .venv/bin/activate` instead of the first command on macOS/Linux. Press `Ctrl+C` to stop the server, and run `deactivate` when you are finished.
+## Verification without browser automation
+
+Backend:
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run typecheck
+NEXT_PUBLIC_USE_MOCK=false npm run build
+```
+
+## Current API scope
+
+The API validates input, returns stable error contracts, attaches request IDs,
+and produces a deterministic seven-day analysis plan. V5 intentionally does
+not include a database, social login, social-platform scraping, automatic
+posting, or a live AI provider.
