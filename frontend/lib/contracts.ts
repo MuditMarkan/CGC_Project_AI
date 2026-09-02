@@ -1,5 +1,15 @@
 export type Impact = "high" | "medium" | "low";
 export type ContentMedium = "carousel" | "single_image" | "reel" | "story";
+export type Goal = "grow_reach" | "increase_saves_per_reach" | "increase_share_rate" | "increase_follow_conversion";
+export type PrimaryMetric = "reach" | "saves_per_reach" | "shares_per_reach" | "follow_conversion";
+
+export interface ManualMetrics {
+  impressions?: number;
+  reach?: number;
+  saves?: number;
+  shares?: number;
+  profile_visits?: number;
+}
 
 export interface AnalysisRequest {
   creator_name: string;
@@ -8,9 +18,11 @@ export interface AnalysisRequest {
   platform: "instagram";
   content_medium: ContentMedium;
   target_audience: string;
-  goal: string;
-  primary_metric: string;
+  goal: Goal;
+  primary_metric: PrimaryMetric;
   brand_tone: string[];
+  manual_metrics: ManualMetrics | null;
+  connected_account_id: string | null;
 }
 
 export interface AnalysisResponse {
@@ -39,6 +51,37 @@ export interface AnalysisResponse {
     decision_rule: string;
   };
   limitations: string[];
+  data_provenance: string[];
+  connected_account: InstagramAccountSummary | null;
+}
+
+export interface InstagramAccountSummary {
+  id: string;
+  instagram_user_id: string;
+  username: string;
+  account_type: string | null;
+  status: "connected" | "revoked" | "expired";
+  scopes: string[];
+  connected_at: string;
+  updated_at: string;
+  token_expires_at: string | null;
+}
+
+export interface InstagramConfigResponse {
+  configured: boolean;
+  provider: "instagram_login";
+  missing: string[];
+  required_scopes: string[];
+  live_verification: "blocked" | "available";
+}
+
+export interface InstagramConnectResponse {
+  authorization_url: string;
+  state_expires_at: string;
+}
+
+export interface InstagramAccountsResponse {
+  accounts: InstagramAccountSummary[];
 }
 
 export interface ApiErrorBody {

@@ -1,4 +1,4 @@
-# Creator Growth Copilot V5 frontend
+# Creator Growth Copilot frontend
 
 Next.js implementation of the approved CGC black-and-white Product UI v0.1.
 
@@ -11,6 +11,9 @@ Next.js implementation of the approved CGC black-and-white Product UI v0.1.
 - FastAPI-compatible request/response contracts and one API client.
 - Explicit deterministic M0 mode returning exactly seven daily tasks.
 - Direct integration with the Python FastAPI service through typed TypeScript contracts.
+- Instagram Professional-account configuration status, OAuth start, account selection, and disconnect UI.
+- Editable creator/audience fields and correctly transmitted manual Insights.
+- Exact goal-to-primary-metric mapping shared with the backend.
 
 ## Run locally
 

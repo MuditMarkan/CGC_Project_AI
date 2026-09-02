@@ -65,5 +65,7 @@ export function createMockAnalysis(input: AnalysisRequest): AnalysisResponse {
       "Mock response; no live Instagram content was retrieved or analyzed.",
       "Recommendations are hypotheses, not guarantees of reach or growth.",
     ],
+    data_provenance: [input.manual_content ? "user_text" : "public_url_reference"],
+    connected_account: null,
   };
 }

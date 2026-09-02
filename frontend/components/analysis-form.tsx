@@ -4,6 +4,7 @@ import { FormEvent, useRef, useState } from "react";
 import { createAnalysis, ApiClientError } from "@/lib/api";
 import type { AnalysisRequest, AnalysisResponse } from "@/lib/contracts";
 import { AnalysisResult } from "./analysis-result";
+import { ConnectedAccountCard } from "./connected-account-card";
 
 type FormErrors = Partial<Record<"creator_name" | "content" | "target_audience" | "brand_tone", string>>;
 const initial: AnalysisRequest = {
@@ -13,10 +14,27 @@ const initial: AnalysisRequest = {
   platform: "instagram",
   content_medium: "carousel",
   target_audience: "Instagram nano-business audience",
-  goal: "increase_saves",
-  primary_metric: "saves",
+  goal: "grow_reach",
+  primary_metric: "reach",
   brand_tone: ["practical"],
+  manual_metrics: null,
+  connected_account_id: null,
 };
+
+const goalOptions = [
+  ["grow_reach", "reach", "Maximize Reach"],
+  ["increase_saves_per_reach", "saves_per_reach", "Saves Per Reach"],
+  ["increase_share_rate", "shares_per_reach", "Share Rate Improvement"],
+  ["increase_follow_conversion", "follow_conversion", "Conversion to Follows"],
+] as const;
+
+const metricFields = [
+  ["impressions", "Impressions"],
+  ["reach", "Reach"],
+  ["saves", "Saves"],
+  ["shares", "Shares"],
+  ["profile_visits", "Profile visits"],
+] as const;
 
 export function AnalysisForm() {
   const [form, setForm] = useState(initial);
@@ -28,6 +46,15 @@ export function AnalysisForm() {
 
   function update<K extends keyof AnalysisRequest>(key: K, value: AnalysisRequest[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateMetric(key: (typeof metricFields)[number][0], rawValue: string) {
+    setForm((current) => {
+      const metrics = { ...(current.manual_metrics ?? {}) };
+      if (rawValue === "") delete metrics[key];
+      else metrics[key] = Number(rawValue);
+      return { ...current, manual_metrics: Object.keys(metrics).length ? metrics : null };
+    });
   }
 
   async function pasteLink() {
@@ -107,20 +134,21 @@ export function AnalysisForm() {
   return (
     <>
       <form className="analysis-form" onSubmit={submit} noValidate>
-        <input type="hidden" value={form.creator_name} readOnly />
-        <input type="hidden" value={form.target_audience} readOnly />
+        <ConnectedAccountCard selectedAccountId={form.connected_account_id} onSelect={(id) => update("connected_account_id", id)} />
+        <div className="field-row">
+          <label><span>Creator / Workspace name</span><input value={form.creator_name} onChange={(event) => update("creator_name", event.target.value)} aria-invalid={!!errors.creator_name} />{errors.creator_name ? <small className="field-error">{errors.creator_name}</small> : null}</label>
+          <label><span>Target audience</span><input value={form.target_audience} onChange={(event) => update("target_audience", event.target.value)} aria-invalid={!!errors.target_audience} />{errors.target_audience ? <small className="field-error">{errors.target_audience}</small> : null}</label>
+        </div>
         <label><span>Instagram Post URL</span><div className="inline-field"><input type="url" value={form.content_url ?? ""} onChange={(e) => update("content_url", e.target.value)} aria-invalid={!!errors.content} aria-describedby={errors.content ? "content-error" : undefined} placeholder="https://www.instagram.com/p/Cr7y..." /><button className="button ghost" type="button" onClick={pasteLink}>Paste Link</button></div></label>
-        <p className="reveal-line">Need manual metrics entry? Toggle fields below. <b>[REVEAL]</b></p>
+        <p className="reveal-line">Use an Instagram URL as a reference and enter Insights manually until live Insights verification passes.</p>
         <div className="field-row">
           <label><span>Post Caption Text</span><textarea value={form.manual_content ?? ""} onChange={(e) => update("manual_content", e.target.value)} aria-invalid={!!errors.content} placeholder="Paste or type caption details here for qualitative copy analysis..." maxLength={20000} /></label>
           <label><span>Content Medium</span><select value={form.content_medium} onChange={(event) => update("content_medium", event.target.value as AnalysisRequest["content_medium"])}><option value="carousel">Carousel Post (Static)</option><option value="single_image">Single Image</option><option value="reel">Video / Reel</option><option value="story">Story</option></select></label>
         </div>
         {errors.content ? <small id="content-error" className="field-error">{errors.content}</small> : null}
-        <fieldset><legend>Manual Instagram Insights data</legend><div className="manual-metrics">{["Impressions", "Reach", "Saves", "Shares", "Profile visits"].map((label) => <label key={label}><span>{label}</span><input inputMode="numeric" placeholder="0" /></label>)}</div></fieldset>
-        <fieldset className="audit-focus"><legend>Audit Focus Objective</legend><div className="check-grid">{([[
-          "increase_saves", "Maximize Reach"
-        ], ["grow_reach", "Saves Per Reach"], ["improve_retention", "Share Rate Improvement"], ["increase_clicks", "Conversion to Follows"]] as const).map(([goal, label]) => <label key={goal}><input type="radio" name="goal" checked={form.goal === goal} onChange={() => update("goal", goal)} /><span>{label}</span></label>)}</div></fieldset>
-        <div className="privacy-note">Tip: Your metric inputs remain private & are processed locally in this demo. No platform login is required.</div>
+        <fieldset><legend>Manual Instagram Insights data</legend><div className="manual-metrics">{metricFields.map(([key, label]) => <label key={key}><span>{label}</span><input type="number" min="0" inputMode="numeric" placeholder="Not provided" value={form.manual_metrics?.[key] ?? ""} onChange={(event) => updateMetric(key, event.target.value)} /></label>)}</div></fieldset>
+        <fieldset className="audit-focus"><legend>Audit Focus Objective</legend><div className="check-grid">{goalOptions.map(([goal, primaryMetric, label]) => <label key={goal}><input type="radio" name="goal" checked={form.goal === goal} onChange={() => setForm((current) => ({ ...current, goal, primary_metric: primaryMetric }))} /><span>{label}</span></label>)}</div></fieldset>
+        <div className="privacy-note">OAuth is read-only and accepts Professional accounts only. Instagram passwords are never requested or stored.</div>
         <div className="form-actions"><button className="button primary" type="submit" disabled={status === "submitting"}>{status === "submitting" ? "Analyzing…" : "Run System Diagnostic"}</button><button className="button ghost" type="button" onClick={resetForm}>Clear Form</button>{status === "submitting" ? <button className="button ghost" type="button" onClick={() => abortRef.current?.abort()}>Cancel</button> : null}</div>
         <p className={`form-status ${status}`} role="status" aria-live="polite">{message || "No social account access or automatic posting is used."}</p>
       </form>
