@@ -1,10 +1,13 @@
-# Creator Growth Copilot V5 — Full Stack
+# Creator Growth Copilot — Connected Account integration branch
 
 This package contains a working Creator Growth Copilot foundation:
 
 - `frontend/`: Next.js and TypeScript
 - `backend/`: Python, FastAPI, and Pydantic
 - API integration: `POST /api/v1/analyses`
+- persistent SQLite development database
+- Instagram Professional-account OAuth contract and encrypted token storage
+- frontend Connected Account status, selection, connect, and disconnect controls
 - Health check: `GET /health`
 - Interactive API documentation: `http://127.0.0.1:8000/docs`
 
@@ -52,6 +55,11 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_USE_MOCK=false
 ```
 
+Copy `backend/.env.example` to `backend/.env` and add Meta values only after the
+Meta App Dashboard is available. The application reports
+`instagram=needs_configuration` until every required server-side value exists.
+No Instagram password is accepted or stored.
+
 ## Verification without browser automation
 
 Backend:
@@ -72,7 +80,10 @@ NEXT_PUBLIC_USE_MOCK=false npm run build
 
 ## Current API scope
 
-The API validates input, returns stable error contracts, attaches request IDs,
-and produces a deterministic seven-day analysis plan. V5 intentionally does
-not include a database, social login, social-platform scraping, automatic
-posting, or a live AI provider.
+The API validates input, persists analysis runs, returns stable error contracts,
+attaches request IDs, and produces a deterministic seven-day analysis plan. It
+also provides a bounded Instagram Login OAuth seam for one authorized
+Professional account. Live Meta verification and live Insights retrieval remain
+blocked until the Meta developer registration and app credentials are complete.
+Automatic posting, scraping, Instagram passwords, and a live AI provider remain
+out of scope.
