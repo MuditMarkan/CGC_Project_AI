@@ -1,0 +1,27 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Frontend
+node_modules/
+.next/
+out/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+frontend/qa/
+frontend/AGENTS.md
+frontend/CLAUDE.md
+
+# Backend
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Editors
+.idea/
+.vscode/

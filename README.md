@@ -1,6 +1,7 @@
-# Creator Growth Copilot V5 — Full Stack
+# Creator Growth Copilot — Full Stack
 
-This package contains a working Creator Growth Copilot foundation:
+This repository contains the current verified Creator Growth Copilot frontend
+and deterministic M0 backend:
 
 - `frontend/`: Next.js and TypeScript
 - `backend/`: Python, FastAPI, and Pydantic
@@ -8,7 +9,7 @@ This package contains a working Creator Growth Copilot foundation:
 - Health check: `GET /health`
 - Interactive API documentation: `http://127.0.0.1:8000/docs`
 
-Selenium and Playwright are intentionally excluded.
+Playwright end-to-end and integration checks are included in the frontend.
 
 ## Requirements
 
@@ -52,7 +53,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_USE_MOCK=false
 ```
 
-## Verification without browser automation
+## Verification
 
 Backend:
 
@@ -67,12 +68,14 @@ Frontend:
 ```bash
 cd frontend
 npm run typecheck
-NEXT_PUBLIC_USE_MOCK=false npm run build
+NEXT_PUBLIC_USE_MOCK=true npm run build
+npm run test:e2e
+npx playwright test -c playwright.integration.config.ts
 ```
 
 ## Current API scope
 
 The API validates input, returns stable error contracts, attaches request IDs,
-and produces a deterministic seven-day analysis plan. V5 intentionally does
+and produces a deterministic seven-day analysis plan. The current M0 scope does
 not include a database, social login, social-platform scraping, automatic
 posting, or a live AI provider.

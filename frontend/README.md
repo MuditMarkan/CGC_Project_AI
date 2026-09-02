@@ -1,4 +1,4 @@
-# Creator Growth Copilot V5 frontend
+# Creator Growth Copilot frontend
 
 Next.js implementation of the approved CGC black-and-white Product UI v0.1.
 
@@ -10,7 +10,7 @@ Next.js implementation of the approved CGC black-and-white Product UI v0.1.
 - Working clipboard paste, four content-medium options, and a complete form reset.
 - FastAPI-compatible request/response contracts and one API client.
 - Explicit deterministic M0 mode returning exactly seven daily tasks.
-- Direct integration with the Python FastAPI service through typed TypeScript contracts.
+- Playwright coverage for desktop Chrome and a 390 × 844 mobile viewport.
 
 ## Run locally
 
@@ -22,15 +22,15 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The checked-in `.env.example` uses the real local FastAPI service by default. Start `../backend` on port 8000 and keep `NEXT_PUBLIC_USE_MOCK=false`. Use `true` only for an isolated deterministic frontend demo.
+The checked-in `.env.example` uses the real local FastAPI service by default. Start `../backend` on port 8000, then set `NEXT_PUBLIC_USE_MOCK=false`. Use `true` only for an isolated deterministic frontend demo.
 
 ## Verification
 
 ```bash
 npm run typecheck
-NEXT_PUBLIC_USE_MOCK=false npm run build
+NEXT_PUBLIC_USE_MOCK=true npm run build
+npm run test:e2e
+npx playwright test -c playwright.integration.config.ts
 ```
 
-The API integration lives in `lib/api.ts`; public contracts live in `lib/contracts.ts`. Provider keys and database credentials must never be added to `NEXT_PUBLIC_*` variables.
-
-This package intentionally contains no Selenium or Playwright configuration or dependencies.
+The integration Playwright run expects the frontend at `http://127.0.0.1:3100` and the API at `http://127.0.0.1:8000`. The API integration lives in `lib/api.ts`; public contracts live in `lib/contracts.ts`. Provider keys and database credentials must never be added to `NEXT_PUBLIC_*` variables.

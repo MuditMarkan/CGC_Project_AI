@@ -1,6 +1,6 @@
-# Creator Growth Copilot V5 Full-Stack Verification
+# Creator Growth Copilot Full-Stack Verification
 
-Date: 2026-08-27
+Date: 2026-09-02
 
 ## Result
 
@@ -12,9 +12,9 @@ GO for local development and M0 API integration.
 - Language: TypeScript 7.0.2
 - `npm audit`: 0 vulnerabilities
 - `npm run typecheck`: passed
-- `NEXT_PUBLIC_USE_MOCK=false npm run build`: passed
-- Production server `GET /`: HTTP 200
-- Production server `GET /audit`: HTTP 200
+- `NEXT_PUBLIC_USE_MOCK=true npm run build`: passed
+- Static routes generated: dashboard, analysis, audit, experiments, orbit, and reports
+- Playwright desktop/mobile end-to-end suite: 12 passed
 
 ## Backend
 
@@ -29,17 +29,12 @@ GO for local development and M0 API integration.
 ## Integration
 
 - Frontend API base: `http://127.0.0.1:8000`
-- Mock mode disabled during the production build and live server check
+- Real frontend-to-FastAPI Playwright integration: 1 passed
+- The integration harness explicitly allowed its frontend origin at port 3100
 - Local frontend origins are enabled through the backend CORS policy
 - TypeScript and Pydantic request field names are contract-tested for alignment
 
-## Exclusions
-
-No Selenium or Playwright configuration, dependency, or execution is included
-in this package. Verification used compiler/build checks, Python tests, and
-direct HTTP requests.
-
 ## Scope caveat
 
-The V5 backend is the deterministic M0 implementation. It does not include a
+The backend is the deterministic M0 implementation. It does not include a
 database, social login, scraping, automatic posting, or a live AI provider.
