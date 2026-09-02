@@ -3,12 +3,29 @@ from __future__ import annotations
 import os
 import uuid
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
-from .models import AnalysisRequest, AnalysisResponse, ErrorBody, HealthResponse
+from .database import get_database
+from .instagram import (
+    REQUIRED_SCOPES,
+    InstagramIntegrationError,
+    InstagramSettings,
+    begin_instagram_connection,
+    complete_instagram_connection,
+    utc_now,
+)
+from .models import (
+    AnalysisRequest,
+    AnalysisResponse,
+    ErrorBody,
+    HealthResponse,
+    InstagramAccountsResponse,
+    InstagramConfigResponse,
+    InstagramConnectResponse,
+)
 from .service import build_analysis
 
 
@@ -35,8 +52,8 @@ def error_response(*, status_code: int, code: str, message: str, retryable: bool
 
 app = FastAPI(
     title="Creator Growth Copilot API",
-    version="0.2.0",
-    description="Deterministic M0 API. No social login, scraping, database, or live AI provider.",
+    version="0.3.0",
+    description="Persistent CGC API with a bounded Instagram Professional-account OAuth seam.",
 )
 
 allowed_origins = [
@@ -51,7 +68,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-Request-ID"],
     expose_headers=["X-Request-ID"],
 )
@@ -99,9 +116,28 @@ async def internal_error_handler(_request: Request, _exc: Exception) -> JSONResp
     )
 
 
+@app.exception_handler(InstagramIntegrationError)
+async def instagram_error_handler(_request: Request, exc: InstagramIntegrationError) -> JSONResponse:
+    return error_response(
+        status_code=exc.status_code,
+        code=exc.code,
+        message=exc.message,
+        retryable=exc.retryable,
+        details=exc.details,
+    )
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    return HealthResponse(status="ok", api="ready", database="not_required_for_m0", provider="mock")
+    settings = InstagramSettings.from_env()
+    get_database()
+    return HealthResponse(
+        status="ok",
+        api="ready",
+        database="ready",
+        provider="mock",
+        instagram="configured" if not settings.missing() else "needs_configuration",
+    )
 
 
 @app.post(
@@ -112,4 +148,65 @@ async def health() -> HealthResponse:
 async def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
     if not request.content_url and not (request.manual_content and request.manual_content.strip()):
         raise InvalidInputError("Provide a public content URL or manual content.")
-    return build_analysis(request)
+    database = get_database()
+    connected_account = None
+    if request.connected_account_id:
+        connected_account = database.get_instagram_account(request.connected_account_id)
+        if connected_account is None:
+            raise InvalidInputError(
+                "The selected Instagram account is not connected.",
+                {"field": "connected_account_id"},
+            )
+    response = build_analysis(request, connected_account)
+    database.save_analysis(request, response)
+    return response
+
+
+@app.get("/api/v1/instagram/config", response_model=InstagramConfigResponse)
+async def instagram_config() -> InstagramConfigResponse:
+    settings = InstagramSettings.from_env()
+    missing = settings.missing()
+    return InstagramConfigResponse(
+        configured=not missing,
+        provider="instagram_login",
+        missing=missing,
+        required_scopes=REQUIRED_SCOPES,
+        live_verification="blocked" if missing else "available",
+    )
+
+
+@app.post(
+    "/api/v1/instagram/connect",
+    response_model=InstagramConnectResponse,
+    responses={409: {"model": ErrorBody}},
+)
+async def instagram_connect() -> InstagramConnectResponse:
+    return begin_instagram_connection(get_database(), InstagramSettings.from_env())
+
+
+@app.get("/api/v1/instagram/callback")
+async def instagram_callback(
+    code: str = Query(min_length=1),
+    state: str = Query(min_length=1),
+) -> RedirectResponse:
+    settings = InstagramSettings.from_env()
+    account = await complete_instagram_connection(
+        database=get_database(),
+        settings=settings,
+        code=code,
+        state=state,
+    )
+    separator = "&" if "?" in settings.frontend_url else "?"
+    target = f"{settings.frontend_url.rstrip('/')}/analysis{separator}instagram=connected&account_id={account.id}"
+    return RedirectResponse(target, status_code=303)
+
+
+@app.get("/api/v1/instagram/accounts", response_model=InstagramAccountsResponse)
+async def instagram_accounts() -> InstagramAccountsResponse:
+    return InstagramAccountsResponse(accounts=get_database().list_instagram_accounts())
+
+
+@app.delete("/api/v1/instagram/accounts/{account_id}", status_code=204)
+async def instagram_disconnect(account_id: str) -> None:
+    if not get_database().disconnect_instagram_account(account_id, utc_now().isoformat()):
+        raise InvalidInputError("The Instagram account is not connected.", {"account_id": account_id})

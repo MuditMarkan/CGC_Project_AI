@@ -1,5 +1,9 @@
+import os
+import tempfile
 from fastapi.testclient import TestClient
 from unittest.mock import patch
+
+os.environ["CGC_DATABASE_PATH"] = os.path.join(tempfile.mkdtemp(prefix="cgc-tests-"), "cgc.db")
 
 from app.main import app
 
@@ -15,9 +19,11 @@ def valid_payload() -> dict[str, object]:
         "platform": "instagram",
         "content_medium": "carousel",
         "target_audience": "Instagram nano-business audience",
-        "goal": "increase_saves",
-        "primary_metric": "saves",
+        "goal": "increase_saves_per_reach",
+        "primary_metric": "saves_per_reach",
         "brand_tone": ["practical"],
+        "manual_metrics": None,
+        "connected_account_id": None,
     }
 
 
@@ -27,8 +33,9 @@ def test_health_contract() -> None:
     assert response.json() == {
         "status": "ok",
         "api": "ready",
-        "database": "not_required_for_m0",
+        "database": "ready",
         "provider": "mock",
+        "instagram": "needs_configuration",
     }
     assert response.headers["X-Request-ID"]
 
@@ -42,7 +49,26 @@ def test_valid_analysis_is_deterministic_and_has_seven_days() -> None:
     assert first.json()["sample_data"] is True
     assert first.json()["provider"] == "mock"
     assert len(first.json()["seven_day_plan"]) == 7
-    assert first.json()["seven_day_plan"][0]["success_metric"] == "saves"
+    assert first.json()["seven_day_plan"][0]["success_metric"] == "saves_per_reach"
+
+
+def test_manual_metrics_reach_backend_and_provenance() -> None:
+    payload = valid_payload()
+    payload["manual_metrics"] = {"reach": 10_000, "saves": 240, "shares": 90}
+    response = client.post("/api/v1/analyses", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert "manual_metrics" in body["data_provenance"]
+    assert "Saves per reach: 2.40%." in body["observed_facts"]
+    assert "Shares per reach: 0.90%." in body["observed_facts"]
+
+
+def test_goal_and_primary_metric_must_match() -> None:
+    payload = valid_payload()
+    payload["primary_metric"] = "reach"
+    response = client.post("/api/v1/analyses", json=payload)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_failed"
 
 
 def test_missing_content_returns_stable_400_contract() -> None:
@@ -87,6 +113,26 @@ def test_cors_allows_local_frontend() -> None:
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_instagram_config_is_honest_when_meta_is_missing() -> None:
+    response = client.get("/api/v1/instagram/config")
+    assert response.status_code == 200
+    assert response.json()["configured"] is False
+    assert response.json()["live_verification"] == "blocked"
+    assert "CGC_INSTAGRAM_APP_ID" in response.json()["missing"]
+
+
+def test_instagram_connect_fails_closed_when_unconfigured() -> None:
+    response = client.post("/api/v1/instagram/connect")
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "instagram_not_configured"
+
+
+def test_instagram_accounts_start_empty() -> None:
+    response = client.get("/api/v1/instagram/accounts")
+    assert response.status_code == 200
+    assert response.json() == {"accounts": []}
 
 
 def test_internal_failure_returns_stable_500_contract() -> None:
