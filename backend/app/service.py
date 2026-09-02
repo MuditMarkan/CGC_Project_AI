@@ -4,7 +4,7 @@ import hashlib
 import json
 import uuid
 
-from .models import AnalysisRequest, AnalysisResponse
+from .models import AnalysisRequest, AnalysisResponse, InstagramAccountSummary
 
 
 TASKS = (
@@ -24,13 +24,37 @@ def _analysis_id(request: AnalysisRequest) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"cgc-m0:{digest}"))
 
 
-def build_analysis(request: AnalysisRequest) -> AnalysisResponse:
+def build_analysis(
+    request: AnalysisRequest,
+    connected_account: InstagramAccountSummary | None = None,
+) -> AnalysisResponse:
     source_fact = (
         "The creator supplied content manually."
         if request.manual_content
         else "A public content URL was supplied; M0 records the URL but does not retrieve it."
     )
     medium = request.content_medium.replace("_", " ")
+    metric_facts: list[str] = []
+    if request.manual_metrics:
+        supplied = request.manual_metrics.model_dump(exclude_none=True)
+        metric_facts.append(f"Manual Insights supplied: {', '.join(sorted(supplied))}.")
+        reach = supplied.get("reach")
+        if reach:
+            if "saves" in supplied:
+                metric_facts.append(f"Saves per reach: {supplied['saves'] / reach:.2%}.")
+            if "shares" in supplied:
+                metric_facts.append(f"Shares per reach: {supplied['shares'] / reach:.2%}.")
+    account_fact = (
+        f"Connected Instagram Professional account: @{connected_account.username}."
+        if connected_account
+        else None
+    )
+    provenance = ["user_text" if request.manual_content else "public_url_reference"]
+    if request.manual_metrics:
+        provenance.append("manual_metrics")
+    if connected_account:
+        provenance.append("connected_account_identity")
+
     return AnalysisResponse.model_validate(
         {
             "analysis_id": _analysis_id(request),
@@ -41,6 +65,8 @@ def build_analysis(request: AnalysisRequest) -> AnalysisResponse:
                 f"The request targets Instagram and uses {request.primary_metric} as the primary metric.",
                 f"The selected content medium is {medium}.",
                 source_fact,
+                *metric_facts,
+                *([account_fact] if account_fact else []),
             ],
             "assumptions": [
                 {
@@ -86,9 +112,11 @@ def build_analysis(request: AnalysisRequest) -> AnalysisResponse:
                 ),
             },
             "limitations": [
-                "Mock response; no live Instagram content was retrieved or analyzed.",
+                "Deterministic response; live Instagram Insights retrieval is not enabled yet.",
                 "Recommendations are hypotheses, not guarantees of reach or growth.",
-                "No social account credentials, scraping, posting, or database are used in M0.",
+                "Instagram passwords are never collected; connected accounts use revocable OAuth tokens.",
             ],
+            "data_provenance": provenance,
+            "connected_account": connected_account,
         }
     )

@@ -1,4 +1,11 @@
-import type { AnalysisRequest, AnalysisResponse, ApiErrorBody } from "./contracts";
+import type {
+  AnalysisRequest,
+  AnalysisResponse,
+  ApiErrorBody,
+  InstagramAccountsResponse,
+  InstagramConfigResponse,
+  InstagramConnectResponse,
+} from "./contracts";
 import { createMockAnalysis } from "./mock-analysis";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -13,6 +20,37 @@ export class ApiClientError extends Error {
   ) {
     super(message);
   }
+}
+
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...init });
+  const body = response.status === 204 ? null : await response.json();
+  if (!response.ok) {
+    const error = (body as ApiErrorBody | null)?.error;
+    throw new ApiClientError(
+      error?.message ?? "The request failed.",
+      error?.code ?? "unknown_error",
+      error?.retryable ?? false,
+      response.status,
+    );
+  }
+  return body as T;
+}
+
+export function getInstagramConfig(): Promise<InstagramConfigResponse> {
+  return requestJson("/api/v1/instagram/config");
+}
+
+export function getInstagramAccounts(): Promise<InstagramAccountsResponse> {
+  return requestJson("/api/v1/instagram/accounts");
+}
+
+export function beginInstagramConnect(): Promise<InstagramConnectResponse> {
+  return requestJson("/api/v1/instagram/connect", { method: "POST" });
+}
+
+export function disconnectInstagramAccount(accountId: string): Promise<null> {
+  return requestJson(`/api/v1/instagram/accounts/${encodeURIComponent(accountId)}`, { method: "DELETE" });
 }
 
 export async function createAnalysis(
