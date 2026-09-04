@@ -1,6 +1,14 @@
 export type Impact = "high" | "medium" | "low";
 export type ContentMedium = "carousel" | "single_image" | "reel" | "story";
 
+export interface ManualInsights {
+  impressions: number | null;
+  reach: number | null;
+  saves: number | null;
+  shares: number | null;
+  profile_visits: number | null;
+}
+
 export interface AnalysisRequest {
   creator_name: string;
   content_url: string | null;
@@ -11,6 +19,7 @@ export interface AnalysisRequest {
   goal: string;
   primary_metric: string;
   brand_tone: string[];
+  manual_insights: ManualInsights | null;
 }
 
 export interface AnalysisResponse {
@@ -18,6 +27,12 @@ export interface AnalysisResponse {
   status: "completed";
   provider: string;
   sample_data: boolean;
+  submitted_insights: ManualInsights | null;
+  calculated_metrics: {
+    saves_per_reach_pct: number | null;
+    shares_per_reach_pct: number | null;
+    profile_visits_per_reach_pct: number | null;
+  };
   observed_facts: string[];
   assumptions: Array<{ text: string; confidence: number }>;
   prioritized_findings: Array<{

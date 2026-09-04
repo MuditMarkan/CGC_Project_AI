@@ -1,7 +1,7 @@
 import type { AnalysisRequest, AnalysisResponse, ApiErrorBody } from "./contracts";
 import { createMockAnalysis } from "./mock-analysis";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export class ApiClientError extends Error {

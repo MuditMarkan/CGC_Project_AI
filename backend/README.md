@@ -8,6 +8,7 @@ Deterministic FastAPI/Pydantic implementation of the CGC M0 contract.
 - `POST /api/v1/analyses`
 - stable `400`, `422`, and `500` error envelopes
 - exactly seven deterministic plan items
+- validated optional manual Insights and calculated per-reach ratios
 - localhost CORS for the Next.js frontend
 - no database, social login, scraping, posting, paid service, API key, or live AI provider
 

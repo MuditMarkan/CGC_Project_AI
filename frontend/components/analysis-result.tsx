@@ -1,4 +1,5 @@
 import type { AnalysisResponse } from "@/lib/contracts";
+import Link from "next/link";
 import { Panel, Pill, SectionTitle } from "./ui";
 
 export function AnalysisResult({ result }: { result: AnalysisResponse }) {
@@ -10,5 +11,9 @@ export function AnalysisResult({ result }: { result: AnalysisResponse }) {
     </div>
     <Panel><SectionTitle eyebrow="SEVEN-DAY PLAN" title="A focused operating rhythm" /><ol className="plan-list">{result.seven_day_plan.map((item) => <li key={item.day}><span>DAY {item.day}</span><b>{item.task}</b><small>{item.expected_output} · Metric: {item.success_metric}</small></li>)}</ol></Panel>
     <Panel className="limitations"><SectionTitle eyebrow="EVIDENCE LIMITATIONS" title="What this result does not claim" /><ul>{result.limitations.map((item) => <li key={item}>{item}</li>)}</ul></Panel>
+    <div className="form-actions" aria-label="Analysis result destinations">
+      <Link className="button primary" href="/audit">Open Audit Results</Link>
+      <Link className="button ghost" href="/orbit">Open 7-Day Plan</Link>
+    </div>
   </div>;
 }

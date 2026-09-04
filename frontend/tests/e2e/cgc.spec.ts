@@ -70,7 +70,10 @@ test("Anusha findings: paste, dropdown, clear, and growth-plan spacing work", as
   await expect(page.getByLabel("Post Caption Text")).toHaveValue("");
   await expect(page.getByText("Form cleared.")).toBeVisible();
 
-  await page.goto("/audit");
+  await page.getByLabel("Post Caption Text").fill("A practical guide to using AI for a small service business.");
+  await page.getByRole("button", { name: "Run System Diagnostic" }).click();
+  await page.getByRole("link", { name: "Open Audit Results" }).click();
+  await expect(page.locator(".structured-findings > li")).toHaveCount(3);
   const lastMetric = page.locator(".confidence-panel .progress-item").last();
   const growthPlan = page.getByRole("link", { name: "Generate Growth Plan" });
   const metricBox = await lastMetric.boundingBox();
@@ -80,6 +83,7 @@ test("Anusha findings: paste, dropdown, clear, and growth-plan spacing work", as
   expect(buttonBox!.y).toBeGreaterThanOrEqual(metricBox!.y + metricBox!.height);
   await growthPlan.click();
   await expect(page.getByRole("heading", { level: 1, name: "7-Day Sequential Growth Plan" })).toBeVisible();
+  await expect(page.locator("tbody > tr")).toHaveCount(7);
 });
 
 test("responsive navigation switches between desktop and mobile", async ({ page }, testInfo) => {

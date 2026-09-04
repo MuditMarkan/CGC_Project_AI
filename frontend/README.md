@@ -8,7 +8,9 @@ Next.js implementation of the approved CGC black-and-white Product UI v0.1.
 - Simple monochrome desktop sidebar and five-item mobile navigation with a `More` menu.
 - Accessible analysis form with client-side validation, loading, cancellation, error, and completed states.
 - Working clipboard paste, four content-medium options, and a complete form reset.
+- Manual Insights values are submitted to FastAPI and returned with calculated per-reach ratios.
 - FastAPI-compatible request/response contracts and one API client.
+- The latest API response powers the standalone Audit Results and Growth Plan routes for the current browser session.
 - Explicit deterministic M0 mode returning exactly seven daily tasks.
 - Playwright coverage for desktop Chrome and a 390 × 844 mobile viewport.
 
@@ -30,7 +32,7 @@ The checked-in `.env.example` uses the real local FastAPI service by default. St
 npm run typecheck
 NEXT_PUBLIC_USE_MOCK=true npm run build
 npm run test:e2e
-npx playwright test -c playwright.integration.config.ts
+npm run test:integration
 ```
 
-The integration Playwright run expects the frontend at `http://127.0.0.1:3100` and the API at `http://127.0.0.1:8000`. The API integration lives in `lib/api.ts`; public contracts live in `lib/contracts.ts`. Provider keys and database credentials must never be added to `NEXT_PUBLIC_*` variables.
+Keep the backend running for the integration test. Playwright starts the frontend at `http://127.0.0.1:3100`; the API must be available at `http://127.0.0.1:8000`. The API integration lives in `lib/api.ts`; public contracts live in `lib/contracts.ts`. Provider keys and database credentials must never be added to `NEXT_PUBLIC_*` variables.

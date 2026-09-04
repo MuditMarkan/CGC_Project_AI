@@ -35,7 +35,7 @@ def error_response(*, status_code: int, code: str, message: str, retryable: bool
 
 app = FastAPI(
     title="Creator Growth Copilot API",
-    version="0.2.0",
+    version="0.3.0",
     description="Deterministic M0 API. No social login, scraping, database, or live AI provider.",
 )
 
@@ -43,7 +43,7 @@ allowed_origins = [
     origin.strip()
     for origin in os.getenv(
         "CGC_ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3100,http://127.0.0.1:3100",
     ).split(",")
     if origin.strip()
 ]

@@ -31,16 +31,37 @@ def build_analysis(request: AnalysisRequest) -> AnalysisResponse:
         else "A public content URL was supplied; M0 records the URL but does not retrieve it."
     )
     medium = request.content_medium.replace("_", " ")
+    insights = request.manual_insights
+    reach = insights.reach if insights else None
+
+    def per_reach(value: int | None) -> float | None:
+        if value is None or not reach:
+            return None
+        return round(value / reach * 100, 2)
+
+    calculated_metrics = {
+        "saves_per_reach_pct": per_reach(insights.saves if insights else None),
+        "shares_per_reach_pct": per_reach(insights.shares if insights else None),
+        "profile_visits_per_reach_pct": per_reach(insights.profile_visits if insights else None),
+    }
+    insight_fact = (
+        f"Manual insights were supplied with reach={reach}."
+        if insights and reach is not None
+        else "No usable manual reach baseline was supplied."
+    )
     return AnalysisResponse.model_validate(
         {
             "analysis_id": _analysis_id(request),
             "status": "completed",
             "provider": "mock",
             "sample_data": True,
+            "submitted_insights": insights,
+            "calculated_metrics": calculated_metrics,
             "observed_facts": [
                 f"The request targets Instagram and uses {request.primary_metric} as the primary metric.",
                 f"The selected content medium is {medium}.",
                 source_fact,
+                insight_fact,
             ],
             "assumptions": [
                 {

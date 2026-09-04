@@ -2,7 +2,8 @@
 
 import { FormEvent, useRef, useState } from "react";
 import { createAnalysis, ApiClientError } from "@/lib/api";
-import type { AnalysisRequest, AnalysisResponse } from "@/lib/contracts";
+import type { AnalysisRequest, AnalysisResponse, ManualInsights } from "@/lib/contracts";
+import { clearLatestAnalysis, saveLatestAnalysis } from "@/lib/analysis-session";
 import { AnalysisResult } from "./analysis-result";
 
 type FormErrors = Partial<Record<"creator_name" | "content" | "target_audience" | "brand_tone", string>>;
@@ -16,6 +17,23 @@ const initial: AnalysisRequest = {
   goal: "increase_saves",
   primary_metric: "saves",
   brand_tone: ["practical"],
+  manual_insights: null,
+};
+
+type InsightKey = keyof ManualInsights;
+const insightFields: Array<[InsightKey, string]> = [
+  ["impressions", "Impressions"],
+  ["reach", "Reach"],
+  ["saves", "Saves"],
+  ["shares", "Shares"],
+  ["profile_visits", "Profile visits"],
+];
+const emptyInsights: Record<InsightKey, string> = {
+  impressions: "",
+  reach: "",
+  saves: "",
+  shares: "",
+  profile_visits: "",
 };
 
 export function AnalysisForm() {
@@ -24,6 +42,7 @@ export function AnalysisForm() {
   const [status, setStatus] = useState<"idle" | "submitting" | "completed" | "error">("idle");
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [message, setMessage] = useState("");
+  const [insights, setInsights] = useState(emptyInsights);
   const abortRef = useRef<AbortController | null>(null);
 
   function update<K extends keyof AnalysisRequest>(key: K, value: AnalysisRequest[K]) {
@@ -50,10 +69,12 @@ export function AnalysisForm() {
 
   function resetForm() {
     abortRef.current?.abort();
+    clearLatestAnalysis();
     setForm(initial);
     setErrors({});
     setStatus("idle");
     setResult(null);
+    setInsights(emptyInsights);
     setMessage("Form cleared.");
   }
 
@@ -81,13 +102,19 @@ export function AnalysisForm() {
     setMessage("Analyzing the submitted brief…");
     setResult(null);
     try {
+      const parsedInsights = Object.fromEntries(
+        insightFields.map(([key]) => [key, insights[key] === "" ? null : Number(insights[key])]),
+      ) as unknown as ManualInsights;
+      const hasInsights = Object.values(parsedInsights).some((value) => value !== null);
       const response = await createAnalysis({
         ...form,
         creator_name: form.creator_name.trim(),
         content_url: form.content_url?.trim() || null,
         manual_content: form.manual_content?.trim() || null,
         target_audience: form.target_audience.trim(),
+        manual_insights: hasInsights ? parsedInsights : null,
       }, controller.signal);
+      saveLatestAnalysis(response);
       setResult(response);
       setStatus("completed");
       setMessage("Analysis completed.");
@@ -116,10 +143,13 @@ export function AnalysisForm() {
           <label><span>Content Medium</span><select value={form.content_medium} onChange={(event) => update("content_medium", event.target.value as AnalysisRequest["content_medium"])}><option value="carousel">Carousel Post (Static)</option><option value="single_image">Single Image</option><option value="reel">Video / Reel</option><option value="story">Story</option></select></label>
         </div>
         {errors.content ? <small id="content-error" className="field-error">{errors.content}</small> : null}
-        <fieldset><legend>Manual Instagram Insights data</legend><div className="manual-metrics">{["Impressions", "Reach", "Saves", "Shares", "Profile visits"].map((label) => <label key={label}><span>{label}</span><input inputMode="numeric" placeholder="0" /></label>)}</div></fieldset>
+        <fieldset><legend>Manual Instagram Insights data</legend><div className="manual-metrics">{insightFields.map(([key, label]) => <label key={key}><span>{label}</span><input type="number" min="0" step="1" inputMode="numeric" placeholder="0" value={insights[key]} onChange={(event) => setInsights((current) => ({ ...current, [key]: event.target.value }))} /></label>)}</div></fieldset>
         <fieldset className="audit-focus"><legend>Audit Focus Objective</legend><div className="check-grid">{([[
-          "increase_saves", "Maximize Reach"
-        ], ["grow_reach", "Saves Per Reach"], ["improve_retention", "Share Rate Improvement"], ["increase_clicks", "Conversion to Follows"]] as const).map(([goal, label]) => <label key={goal}><input type="radio" name="goal" checked={form.goal === goal} onChange={() => update("goal", goal)} /><span>{label}</span></label>)}</div></fieldset>
+          "increase_saves", "Increase Saves"
+        ], ["grow_reach", "Maximize Reach"], ["improve_retention", "Share Rate Improvement"], ["increase_clicks", "Conversion to Profile Visits"]] as const).map(([goal, label]) => <label key={goal}><input type="radio" name="goal" checked={form.goal === goal} onChange={() => {
+          const metric = goal === "increase_saves" ? "saves" : goal === "grow_reach" ? "reach" : goal === "improve_retention" ? "shares" : "profile_visits";
+          setForm((current) => ({ ...current, goal, primary_metric: metric }));
+        }} /><span>{label}</span></label>)}</div></fieldset>
         <div className="privacy-note">Tip: Your metric inputs remain private & are processed locally in this demo. No platform login is required.</div>
         <div className="form-actions"><button className="button primary" type="submit" disabled={status === "submitting"}>{status === "submitting" ? "Analyzing…" : "Run System Diagnostic"}</button><button className="button ghost" type="button" onClick={resetForm}>Clear Form</button>{status === "submitting" ? <button className="button ghost" type="button" onClick={() => abortRef.current?.abort()}>Cancel</button> : null}</div>
         <p className={`form-status ${status}`} role="status" aria-live="polite">{message || "No social account access or automatic posting is used."}</p>

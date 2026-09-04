@@ -5,6 +5,8 @@ test("real frontend reaches FastAPI and renders the contract response", async ({
   await page.goto("/analysis");
   await page.getByLabel("Post Caption Text").fill("A practical guide to AI for a small service business.");
   await page.getByLabel("Content Medium").selectOption("reel");
+  await page.getByRole("spinbutton", { name: "Reach", exact: true }).fill("1000");
+  await page.getByRole("spinbutton", { name: "Saves", exact: true }).fill("45");
 
   const apiResponse = page.waitForResponse((response) =>
     response.url().endsWith("/api/v1/analyses") && response.request().method() === "POST",
@@ -21,5 +23,10 @@ test("real frontend reaches FastAPI and renders the contract response", async ({
   await expect(page.getByText("Analysis completed.")).toBeVisible();
   await expect(page.getByText("SAMPLE DATA", { exact: true })).toBeVisible();
   await expect(page.locator(".plan-list > li")).toHaveCount(7);
+  await page.getByRole("link", { name: "Open Audit Results" }).click();
+  await expect(page.locator(".structured-findings > li")).toHaveCount(3);
+  await expect(page.getByText("4.5%", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Generate Growth Plan" }).click();
+  await expect(page.locator("tbody > tr")).toHaveCount(7);
   await page.screenshot({ path: "qa/evidence/integrated-frontend-fastapi.png", fullPage: true });
 });

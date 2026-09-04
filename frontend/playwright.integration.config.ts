@@ -15,4 +15,10 @@ export default defineConfig({
   projects: [
     { name: "integrated-desktop-chrome", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 1024 } } },
   ],
+  webServer: {
+    command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+    url: "http://127.0.0.1:3100",
+    reuseExistingServer: true,
+    timeout: 120_000,
+  },
 });

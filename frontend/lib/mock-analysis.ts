@@ -11,17 +11,28 @@ const tasks = [
 ];
 
 export function createMockAnalysis(input: AnalysisRequest): AnalysisResponse {
+  const reach = input.manual_insights?.reach;
+  const perReach = (value: number | null | undefined) => value == null || !reach ? null : Math.round(value / reach * 10000) / 100;
   return {
     analysis_id: "00000000-0000-4000-8000-000000000001",
     status: "completed",
     provider: "mock",
     sample_data: true,
+    submitted_insights: input.manual_insights,
+    calculated_metrics: {
+      saves_per_reach_pct: perReach(input.manual_insights?.saves),
+      shares_per_reach_pct: perReach(input.manual_insights?.shares),
+      profile_visits_per_reach_pct: perReach(input.manual_insights?.profile_visits),
+    },
     observed_facts: [
       `The request targets Instagram and uses ${input.primary_metric} as the primary metric.`,
       `The selected content medium is ${input.content_medium.replace("_", " ")}.`,
       input.manual_content
         ? "The creator supplied content manually."
         : "A public content URL was supplied; M0 does not retrieve it.",
+      reach != null
+        ? `Manual insights were supplied with reach=${reach}.`
+        : "No usable manual reach baseline was supplied.",
     ],
     assumptions: [
       {

@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "npm run verify:routes",
     "dev": "next dev",
+    "dev:fresh": "node scripts/verify-routes.mjs --clean && next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "verify:routes": "node scripts/verify-routes.mjs",
+    "test:e2e": "playwright test",
+    "test:integration": "playwright test -c playwright.integration.config.ts"
   },
   "dependencies": {
     "next": "16.3.2",

@@ -45,6 +45,25 @@ def test_valid_analysis_is_deterministic_and_has_seven_days() -> None:
     assert first.json()["seven_day_plan"][0]["success_metric"] == "saves"
 
 
+def test_manual_insights_are_returned_and_calculated() -> None:
+    payload = valid_payload()
+    payload["manual_insights"] = {
+        "impressions": 1500,
+        "reach": 1000,
+        "saves": 45,
+        "shares": 20,
+        "profile_visits": 30,
+    }
+    response = client.post("/api/v1/analyses", json=payload)
+    assert response.status_code == 200
+    assert response.json()["submitted_insights"]["reach"] == 1000
+    assert response.json()["calculated_metrics"] == {
+        "saves_per_reach_pct": 4.5,
+        "shares_per_reach_pct": 2.0,
+        "profile_visits_per_reach_pct": 3.0,
+    }
+
+
 def test_missing_content_returns_stable_400_contract() -> None:
     payload = valid_payload()
     payload["manual_content"] = None
@@ -87,6 +106,18 @@ def test_cors_allows_local_frontend() -> None:
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_cors_allows_integration_frontend() -> None:
+    response = client.options(
+        "/api/v1/analyses",
+        headers={
+            "Origin": "http://127.0.0.1:3100",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:3100"
 
 
 def test_internal_failure_returns_stable_500_contract() -> None:

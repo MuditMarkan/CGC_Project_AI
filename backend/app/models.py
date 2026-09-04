@@ -9,6 +9,16 @@ ContentMedium = Literal["carousel", "single_image", "reel", "story"]
 Impact = Literal["high", "medium", "low"]
 
 
+class ManualInsights(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    impressions: int | None = Field(default=None, ge=0)
+    reach: int | None = Field(default=None, ge=0)
+    saves: int | None = Field(default=None, ge=0)
+    shares: int | None = Field(default=None, ge=0)
+    profile_visits: int | None = Field(default=None, ge=0)
+
+
 class AnalysisRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -21,6 +31,7 @@ class AnalysisRequest(BaseModel):
     goal: str = Field(min_length=1, max_length=100)
     primary_metric: str = Field(min_length=1, max_length=100)
     brand_tone: list[str] = Field(min_length=1, max_length=10)
+    manual_insights: ManualInsights | None = None
 
     @field_validator("brand_tone")
     @classmethod
@@ -57,11 +68,19 @@ class NextExperiment(BaseModel):
     decision_rule: str
 
 
+class CalculatedMetrics(BaseModel):
+    saves_per_reach_pct: float | None
+    shares_per_reach_pct: float | None
+    profile_visits_per_reach_pct: float | None
+
+
 class AnalysisResponse(BaseModel):
     analysis_id: str
     status: Literal["completed"]
     provider: str
     sample_data: bool
+    submitted_insights: ManualInsights | None
+    calculated_metrics: CalculatedMetrics
     observed_facts: list[str]
     assumptions: list[Assumption]
     prioritized_findings: list[Finding]
