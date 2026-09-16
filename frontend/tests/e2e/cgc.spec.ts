@@ -1,4 +1,53 @@
 import { expect, test } from "@playwright/test";
+
+test("public Professional discovery sends the FE contract and renders verified fields", async ({ page }) => {
+  await page.route("**/api/v1/discovery/instagram/profile", async (route) => {
+    const request = route.request();
+    expect(request.method()).toBe("POST");
+    expect(JSON.parse(request.postData() ?? "{}")).toEqual({ target: "@kate.creator" });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "completed",
+        provider: "meta_business_discovery",
+        sample_data: false,
+        target_username: "kate.creator",
+        retrieved_at: "2026-09-16T20:00:00Z",
+        profile: {
+          username: "kate.creator",
+          name: "Kate Creator",
+          biography: "Public creator profile",
+          profile_picture_url: null,
+          followers_count: 1234,
+          follows_count: 98,
+          media_count: 42,
+          media: [{
+            id: "media-1",
+            caption: "Example post",
+            media_type: "IMAGE",
+            media_url: null,
+            permalink: "https://www.instagram.com/p/example/",
+            thumbnail_url: null,
+            timestamp: "2026-09-15T12:00:00Z",
+            like_count: 50,
+            comments_count: 4,
+          }],
+        },
+        unavailable_fields: ["profile_picture_url"],
+        limitations: ["Public Professional fields only."],
+      }),
+    });
+  });
+  await page.goto("/analysis");
+  await page.getByLabel("Target username or profile URL").fill("@kate.creator");
+  await page.getByRole("button", { name: "Get public profile data" }).click();
+  await expect(page.getByText("Verified public Professional-account fields returned by Meta.")).toBeVisible();
+  await expect(page.getByText("1234", { exact: true })).toBeVisible();
+  await expect(page.getByText("42", { exact: true })).toBeVisible();
+  await expect(page.locator(".discovery-result .finding-list").getByText("Example post", { exact: false })).toBeVisible();
+  await expect(page.getByText("LIVE PUBLIC DATA", { exact: true })).toBeVisible();
+});
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 

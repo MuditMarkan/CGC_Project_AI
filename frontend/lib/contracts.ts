@@ -64,3 +64,35 @@ export interface ApiErrorBody {
     details: Record<string, unknown>;
   };
 }
+
+export interface InstagramPublicMedia {
+  id: string;
+  caption: string | null;
+  media_type: string | null;
+  media_url: string | null;
+  permalink: string | null;
+  thumbnail_url: string | null;
+  timestamp: string | null;
+  like_count: number | null;
+  comments_count: number | null;
+}
+
+export interface InstagramDiscoveryResponse {
+  status: "completed";
+  provider: "meta_business_discovery";
+  sample_data: false;
+  target_username: string;
+  retrieved_at: string;
+  profile: {
+    username: string;
+    name: string | null;
+    biography: string | null;
+    profile_picture_url: string | null;
+    followers_count: number | null;
+    follows_count: number | null;
+    media_count: number | null;
+    media: InstagramPublicMedia[];
+  };
+  unavailable_fields: string[];
+  limitations: string[];
+}

@@ -1,4 +1,4 @@
-import type { AnalysisRequest, AnalysisResponse, ApiErrorBody } from "./contracts";
+import type { AnalysisRequest, AnalysisResponse, ApiErrorBody, InstagramDiscoveryResponse } from "./contracts";
 import { createMockAnalysis } from "./mock-analysis";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -52,4 +52,23 @@ export async function createAnalysis(
     );
   }
   return body as AnalysisResponse;
+}
+
+export async function discoverInstagramProfile(target: string, signal?: AbortSignal): Promise<InstagramDiscoveryResponse> {
+  const response = await fetch(`${API_BASE}/api/v1/discovery/instagram/profile`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Request-ID": crypto.randomUUID(),
+    },
+    body: JSON.stringify({ target }),
+    signal,
+    cache: "no-store",
+  });
+  const body = (await response.json()) as InstagramDiscoveryResponse | ApiErrorBody;
+  if (!response.ok) {
+    const error = (body as ApiErrorBody).error;
+    throw new ApiClientError(error?.message ?? "Public profile lookup failed.", error?.code ?? "unknown_error", error?.retryable ?? false, response.status);
+  }
+  return body as InstagramDiscoveryResponse;
 }
