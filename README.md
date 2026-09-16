@@ -9,14 +9,16 @@ seven-day growth plan returned by the API.
 
 - `frontend/`: Next.js 16, React 19, TypeScript, and Playwright
 - `backend/`: Python 3.11+, FastAPI, Pydantic, Uvicorn, and pytest
-- API integration: `POST /api/v1/analyses`
+- API integrations: `POST /api/v1/analyses` and `POST /api/v1/discovery/instagram/profile`
 - Health check: `GET /health`
 - API documentation: `http://127.0.0.1:8000/docs`
 - Frontend: `http://127.0.0.1:3000`
 
-The backend currently returns deterministic sample analysis. It does not log in
-to Instagram, retrieve a supplied URL, use a database, call a live AI provider,
-or publish content.
+The backend returns deterministic sample analysis and includes an A2 public
+profile discovery seam backed by Meta Business Discovery. Discovery requires a
+server-side Meta configuration; it never exposes the access token to the
+browser. The application does not scrape Instagram, use a database, call a
+live AI provider, or publish content.
 
 ## Requirements
 
@@ -125,6 +127,9 @@ Backend, optional override from `backend/.env.example`:
 
 ```dotenv
 CGC_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3100,http://127.0.0.1:3100
+CGC_META_IG_USER_ID=your_owned_professional_instagram_user_id
+CGC_META_PAGE_ACCESS_TOKEN=your_server_side_page_access_token
+CGC_META_API_VERSION=v24.0
 ```
 
 Use `127.0.0.1` for the local API address. On some Windows machines,
@@ -184,6 +189,34 @@ Insights, observed facts, assumptions, prioritized findings, exactly seven plan
 items, the next experiment, and limitations. Unknown request fields fail closed.
 Errors use stable `400`, `422`, or `500` envelopes. Every response exposes an
 `X-Request-ID` header for troubleshooting.
+
+### `POST /api/v1/discovery/instagram/profile`
+
+This is the A2 public-profile discovery contract. The browser sends only a
+public Instagram profile URL or `@username`. FastAPI validates and normalizes
+the target, then calls Meta Business Discovery from the server using the owned
+Professional Instagram account configured by `CGC_META_IG_USER_ID` and
+`CGC_META_PAGE_ACCESS_TOKEN`.
+
+The normalized response contains only fields Meta returned: username, name,
+biography, profile picture, follower/following/media counts, and recent public
+media metadata. `available_fields`, `unavailable_fields`, and `limitations`
+make missing or unsupported data explicit. Post/reel URLs and non-Instagram
+URLs fail closed. Missing Meta configuration returns a controlled error rather
+than mock data.
+
+End-to-end ownership is intentionally split as follows:
+
+1. Frontend owns target entry, request state, and rendering the normalized API
+   response; it never receives provider credentials.
+2. Backend owns URL validation, Meta credentials, Business Discovery requests,
+   provider-error normalization, and the stable response contract.
+3. Integration is accepted only when backend tests, frontend typecheck/build,
+   mock-contract browser tests, and the real frontend-to-FastAPI test pass.
+4. Live Meta acceptance additionally requires a valid Facebook/Meta app, an
+   owned Professional Instagram account linked to a Facebook Page, the needed
+   permissions, and a successful request for an eligible public Professional
+   target account.
 
 ## Verification
 
@@ -254,8 +287,12 @@ execution policy:
 
 ## Current limitations
 
-- The backend is deterministic M0 sample analysis, not live Instagram analysis.
-- A public URL is recorded but is not fetched.
+- The diagnostic analysis remains deterministic M0 sample analysis.
+- Public-profile discovery works through Meta Business Discovery only after
+  valid server-side Meta configuration; it does not scrape profile pages.
+- Live discovery depends on Meta permissions, token validity, app mode/review,
+  and target-account eligibility; mocked provider tests do not prove those
+  external prerequisites.
 - Manual Insights are validated and used only for per-reach calculations.
 - There is no database or durable analysis history.
 - Experiment and export screens are presentation-only.
