@@ -8,7 +8,15 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .models import AnalysisRequest, AnalysisResponse, ErrorBody, HealthResponse
+from .discovery import DiscoveryError, discover_public_profile
+from .models import (
+    AnalysisRequest,
+    AnalysisResponse,
+    ErrorBody,
+    HealthResponse,
+    InstagramDiscoveryRequest,
+    InstagramDiscoveryResponse,
+)
 from .service import build_analysis
 
 
@@ -88,6 +96,17 @@ async def validation_error_handler(_request: Request, exc: RequestValidationErro
     )
 
 
+@app.exception_handler(DiscoveryError)
+async def discovery_error_handler(_request: Request, exc: DiscoveryError) -> JSONResponse:
+    return error_response(
+        status_code=exc.status_code,
+        code=exc.code,
+        message=exc.message,
+        retryable=exc.retryable,
+        details=exc.details,
+    )
+
+
 @app.exception_handler(Exception)
 async def internal_error_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return error_response(
@@ -113,3 +132,12 @@ async def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
     if not request.content_url and not (request.manual_content and request.manual_content.strip()):
         raise InvalidInputError("Provide a public content URL or manual content.")
     return build_analysis(request)
+
+
+@app.post(
+    "/api/v1/discovery/instagram/profile",
+    response_model=InstagramDiscoveryResponse,
+    responses={400: {"model": ErrorBody}, 409: {"model": ErrorBody}, 424: {"model": ErrorBody}, 502: {"model": ErrorBody}},
+)
+async def instagram_public_profile(request: InstagramDiscoveryRequest) -> InstagramDiscoveryResponse:
+    return await discover_public_profile(request.target)
