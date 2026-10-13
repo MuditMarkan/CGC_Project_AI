@@ -105,3 +105,43 @@ class HealthResponse(BaseModel):
     api: Literal["ready"]
     database: Literal["not_required_for_m0"]
     provider: Literal["mock"]
+
+
+class InstagramDiscoveryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    target: str = Field(min_length=1, max_length=500)
+
+
+class InstagramPublicMedia(BaseModel):
+    id: str
+    caption: str | None = None
+    media_type: str | None = None
+    media_url: str | None = None
+    permalink: str | None = None
+    thumbnail_url: str | None = None
+    timestamp: str | None = None
+    like_count: int | None = None
+    comments_count: int | None = None
+
+
+class InstagramPublicProfile(BaseModel):
+    username: str
+    name: str | None = None
+    biography: str | None = None
+    profile_picture_url: str | None = None
+    followers_count: int | None = None
+    follows_count: int | None = None
+    media_count: int | None = None
+    media: list[InstagramPublicMedia]
+
+
+class InstagramDiscoveryResponse(BaseModel):
+    status: Literal["completed"]
+    provider: Literal["meta_business_discovery"]
+    sample_data: Literal[False]
+    target_username: str
+    retrieved_at: str
+    profile: InstagramPublicProfile
+    unavailable_fields: list[str]
+    limitations: list[str]

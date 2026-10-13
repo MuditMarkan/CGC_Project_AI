@@ -160,6 +160,12 @@ main { display: grid; gap: 20px; }
 .form-status { min-height: 20px; margin: -8px 0 0; color: var(--muted); font-size: 10px; }
 .form-status.error, .field-error { color: #922 !important; }
 .form-status.completed { color: #264e2a; }
+.discovery-section, .discovery-result { display: grid; gap: 16px; }
+.discovery-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.discovery-form label { display: grid; gap: 6px; }
+.discovery-form input { width: 100%; }
+.discovery-result { margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--line); }
+@media (max-width: 700px) { .discovery-form { grid-template-columns: 1fr; } }
 .confidence-panel .button { width: 100%; margin-top: 22px; }
 
 .result-area { display: grid; gap: 18px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
